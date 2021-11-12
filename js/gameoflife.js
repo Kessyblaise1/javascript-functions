@@ -1,27 +1,100 @@
-function seed() {}
+function seed(one, two, three) {
+  return Object.values(arguments)
+}
 
-function same([x, y], [j, k]) {}
+function same([x, y], [j, k]) {
+  return (JSON.stringify(arguments[0]) == JSON.stringify(arguments[1]))
+}
+
+
 
 // The game state to search for `cell` is passed as the `this` value of the function.
-function contains(cell) {}
+function contains(cell) {
+  const checker = this.some(cells => same(cells, cell))
+  return checker
+}
 
-const printCell = (cell, state) => {};
 
-const corners = (state = []) => {};
 
-const printCells = (state) => {};
+const printCell = (cell, state) => {
+  return contains.call(state, cell) ? "\u25A3" : "\u25A2"
+};
 
-const getNeighborsOf = ([x, y]) => {};
 
-const getLivingNeighbors = (cell, state) => {};
 
-const willBeAlive = (cell, state) => {};
+const corners = (state = []) => {
+  let topRight
+  let bottomLeft
 
-const calculateNext = (state) => {};
+  if (state.length == 0) {
+    topRight = [0, 0]
+    bottomLeft = [0, 0]
+  }else{
+    let xValues = state.map(([x, _]) => x)
+    let yValues = state.map(([_, y]) => y)
 
-const iterate = (state, iterations) => {};
+    topRight = [Math.max(...xValues), Math.max(...yValues)]
+    bottomLeft = [Math.min(...xValues), Math.min(...yValues)]
+  }
 
-const main = (pattern, iterations) => {};
+  return {
+    topRight: topRight,
+    bottomLeft: bottomLeft
+  }
+};
+
+const printCells = (state) => {
+  const {topRight, bottomLeft} = corners(state);
+
+  let positions = ""
+
+  for (let y = topRight[1]; y >= bottomLeft[1]; y--) {
+    let row = [];
+    for (let x = bottomLeft[0]; x <= topRight[0]; x++) {
+      row.push(printCell([x, y], state));
+    }
+    positions += row.join(" ") + "\n";
+  }
+  return positions;
+};
+
+const getNeighborsOf = ([x, y]) => [
+  [x-1, y+1], [x, y+1], [x+1, y+1], [x-1, y], [x+1, y], [x-1, y-1], [x, y-1], [x+1, y-1]
+];
+
+const getLivingNeighbors = (cell, state) => {
+  return getNeighborsOf(cell).filter(cell => contains.bind(state)(cell))
+};
+
+const willBeAlive = (cell, state) => {
+  let livingNeighbours = getLivingNeighbors(cell, state);
+
+  return(livingNeighbours.length === 3 || contains.call(state, cell) && livingNeighbours.length === 2)
+};
+
+const calculateNext = (state) => {
+  const {topRight, bottomLeft} = corners(state);
+  let newCells = [];
+  for(let y = topRight[1] + 1; y >= bottomLeft[1] -1; y--){
+    for(let x = bottomLeft[0] -1; x <= topRight[0] + 1; x++) {
+      newCells = newCells.concat(willBeAlive([x, y], state) ? [[x, y]] : [])
+    }
+  }
+  return newCells
+};
+
+const iterate = (state, iterations) => {
+  const states = [state]
+  for (let i = 0; i < iterations; i++) {
+    states.push(calculateNext(states[states.length-1]));
+  }
+  return states
+};
+
+const main = (pattern, iterations) => {
+  const result = iterate(startPatterns[pattern], iterations)
+  result.forEach(game => console.log(printCells(game)))
+};
 
 const startPatterns = {
     rpentomino: [
